@@ -1,0 +1,52 @@
+[tool.poetry]
+name = "tudi"
+version = "0.1.0"
+description = "Tudi is an agent framework"
+authors = ["Zheng Ye <dreamhead.cn@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+langchain-core = "^0.3.44"
+pydantic = "^2.10.6"
+langchain = "^0.3.20"
+
+[[tool.poetry.source]]
+name = "mirrors"
+url = "https://mirrors.aliyun.com/pypi/simple/"
+priority = "primary"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.5"
+langchain-ollama = "^0.2.3"
+
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.9.10"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "N",  # PEP8 naming convetions
+]
+ignore = [
+    "C901",  # too complex
+    "W191",  # indentation contains tabs
+    "D401"  # imperative mood
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
