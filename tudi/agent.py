@@ -3,8 +3,9 @@ from typing import Any, Callable, List, Optional, Type, TypeVar
 
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.output_parsers import BaseOutputParser, JsonOutputParser, StrOutputParser
 from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import Runnable, RunnablePassthrough
 from pydantic import BaseModel
 
 InputT = TypeVar('InputT', bound=BaseModel)
@@ -19,6 +20,9 @@ class Agent:
                  input_type: Optional[Type[InputT]] = None,
                  output_type: Optional[Type[OutputT]] = None,
                  tools: Optional[List[Callable]] = None):
+        if input_type and not prompt_template:
+            raise ValueError("prompt_template must be provided when input_type is set")
+
         self.name = name
         self.model = model
         self.prompt_template = prompt_template
@@ -26,79 +30,100 @@ class Agent:
         self.output_type = output_type
         self.output_parser = JsonOutputParser(pydantic_object=output_type) if output_type else None
         self.tools = tools or []
+        self._prompt_template = self._init_prompt_template(prompt_template, tools, self.output_parser)
+        self._runnable = self._init_runnable(model, tools, self._prompt_template)
+        self._result_template = self._init_result_template()
+
+    def _init_prompt_template(self, prompt_template, tools, output_parser) -> PromptTemplate:
+        if not tools:
+            return self._create_template(prompt_template, output_parser)
+
+        return self._create_agent_prompt()
+
+    def _init_result_template(self) -> PromptTemplate:
+        if not self.output_type:
+            return None
+
+        from tudi.prompts import TYPED_RESULT_PROMPT
+        return PromptTemplate.from_template(
+            template=TYPED_RESULT_PROMPT,
+            partial_variables={"format_instructions": self.output_parser.get_format_instructions()}
+        )
+
+    def _init_runnable(self, model, tools, prompt_template) -> Runnable:
+        if not tools:
+            return model
+
+        agent = create_react_agent(model, tools, prompt_template)
+        return AgentExecutor(agent=agent, tools=tools, verbose=True)
 
     def run(self, input_data: Any) -> Any:
         self._validate_input(input_data)
-        result = self._process_request(input_data)
-        return self._process_output(result)
+        return self._run(input_data)
 
     def _validate_input(self, input_data: Any) -> None:
         if self.input_type and not isinstance(input_data, self.input_type):
             raise TypeError(f"Input must be of type {self.input_type.__name__}")
 
-    def _process_request(self, input_data: Any) -> Any:
+    def _run(self, input_data) -> Any:
         if not self.tools:
-            return self._process_without_tools(input_data)
+            return self.process_without_tools(input_data)
+
         return self._process_with_tools(input_data)
 
-    def _process_without_tools(self, input_data: Any) -> Any:
-        prompt = self._prepare_prompt(input_data)
-        response = self.model.invoke(prompt)
-        return response.content
+    def process_without_tools(self, input_data) -> Any:
+        template_vars = self._prepare_template_vars(input_data)
+        formated = self._prompt_template.format(**template_vars)
+        chain = self._runnable | self._get_output_parser()
+        result = chain.invoke(formated)
+        return self._return_as_output(result)
 
     def _process_with_tools(self, input_data: Any) -> Any:
-        template_vars = self._prepare_template_vars(input_data)
-        if self.prompt_template:
-            template_vars["input"] = self._process_template(input_data)
+        chain = {"input": RunnablePassthrough()} | self._runnable | (lambda x: x["output"])
+        result = chain.invoke({"input": self._as_input(input_data)})
+        return self.return_as_tool_output(result)
 
-        prompt = self._create_agent_prompt()
-        if self.output_type:
-            prompt.partial_variables["format_instructions"] = self.output_parser.get_format_instructions()
-        agent = create_react_agent(self.model, self.tools, prompt)
-        agent_executor = AgentExecutor(agent=agent, tools=self.tools, verbose=True)
-        return agent_executor.invoke(template_vars)["output"]
-
-    def _process_output(self, result: Any) -> Any:
+    def _return_as_output(self, result) -> Any:
         if not self.output_type:
             return result
 
-        try:
-            if isinstance(result, str):
-                if self.output_parser:
-                    parsed_result = self.output_parser.parse(result)
-                    return self.output_type(**parsed_result)
-                return self.output_type(result=result)
-            return result
-        except Exception:
-            if isinstance(result, dict):
-                return self.output_type(**result)
-            return result
+        return self.output_type(**result)
 
-    def _prepare_prompt(self, input_data: Any) -> str:
-        if self.prompt_template:
-            return self._process_template(input_data)
-        return str(input_data)
+    def return_as_tool_output(self, result) -> Any:
+        if not self.output_type:
+            return str(result)
+
+        result_chain = self._result_template | self.model | self.output_parser
+        final_result = result_chain.invoke({"input": result})
+        return self._return_as_output(final_result)
+
+    def _get_output_parser(self) -> BaseOutputParser:
+        return self.output_parser if self.output_parser else StrOutputParser()
 
     def _create_agent_prompt(self) -> PromptTemplate:
         from tudi.prompts import AGENT_PROMPT
-        final_answer_format = "the final answer to the original input question"
-        if self.output_type:
-            final_answer_format = self.output_parser.get_format_instructions()
-        return PromptTemplate.from_template(AGENT_PROMPT).partial(final_answer_format=final_answer_format)
+        return PromptTemplate.from_template(
+            template=AGENT_PROMPT,
+        )
 
-    def _process_template(self, input_data: Any) -> str:
-        template_vars = self._prepare_template_vars(input_data)
-        template = self._create_template(template_vars)
-        return template.format(**template_vars)
+    def _as_input(self, input_data: Any) -> str:
+        if self.prompt_template:
+            template_vars = self._prepare_template_vars(input_data)
+            return self.prompt_template.format(**template_vars)
 
-    def _create_template(self, template_vars: dict) -> PromptTemplate:
-        if self.output_parser:
-            template_vars["format_instructions"] = self.output_parser.get_format_instructions()
+        return str(input_data)
+
+    def _create_template(self, prompt_template, output_parser) -> PromptTemplate:
+        if prompt_template and output_parser:
             return PromptTemplate(
-                template=f"{self.prompt_template}\n{{format_instructions}}",
-                partial_variables={}
+                template=f"{prompt_template}\n{{format_instructions}}",
+                partial_variables={"format_instructions": output_parser.get_format_instructions()}
             )
-        return PromptTemplate.from_template(self.prompt_template)
+
+        if prompt_template:
+            return PromptTemplate.from_template(prompt_template)
+
+        return PromptTemplate.from_template("{input}")
 
     def _prepare_template_vars(self, input_data: Any) -> dict:
         if isinstance(input_data, BaseModel):

@@ -11,9 +11,15 @@ Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
 Thought: I now know the final answer
-Final Answer: {final_answer_format}
+Final Answer: the final answer to the original input question
 
 Begin!
 
 Question: {input}
 Thought:{agent_scratchpad}'''
+
+TYPED_RESULT_PROMPT = '''Transform the final answer to output format.
+
+{format_instructions}
+
+The Final Answer: ```{input}```'''
