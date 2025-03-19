@@ -3,7 +3,7 @@ from typing import Any, Callable, List, Optional, Type, TypeVar
 
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.output_parsers import BaseOutputParser, JsonOutputParser, StrOutputParser
+from langchain_core.output_parsers import BaseOutputParser, StrOutputParser, PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import Runnable, RunnablePassthrough
 from pydantic import BaseModel
@@ -28,7 +28,7 @@ class Agent:
         self.prompt_template = prompt_template
         self.input_type = input_type
         self.output_type = output_type
-        self.output_parser = JsonOutputParser(pydantic_object=output_type) if output_type else None
+        self.output_parser = PydanticOutputParser(pydantic_object=output_type) if output_type else None
         self.tools = tools or []
         self._prompt_template = self._init_prompt_template(prompt_template, tools, self.output_parser)
         self._runnable = self._init_runnable(model, tools, self._prompt_template)
@@ -40,7 +40,7 @@ class Agent:
 
         return self._create_agent_prompt()
 
-    def _init_result_template(self) -> PromptTemplate:
+    def _init_result_template(self) -> Optional[PromptTemplate]:
         if not self.output_type:
             return None
 
@@ -59,35 +59,25 @@ class Agent:
 
     def run(self, input_data: Any) -> Any:
         self._validate_input(input_data)
-        return self._run(input_data)
-
-    def _validate_input(self, input_data: Any) -> None:
-        if self.input_type and not isinstance(input_data, self.input_type):
-            raise TypeError(f"Input must be of type {self.input_type.__name__}")
-
-    def _run(self, input_data) -> Any:
         if not self.tools:
             return self.process_without_tools(input_data)
 
         return self._process_with_tools(input_data)
 
+    def _validate_input(self, input_data: Any) -> None:
+        if self.input_type and not isinstance(input_data, self.input_type):
+            raise TypeError(f"Input must be of type {self.input_type.__name__}")
+
     def process_without_tools(self, input_data) -> Any:
         template_vars = self._prepare_template_vars(input_data)
         formated = self._prompt_template.format(**template_vars)
         chain = self._runnable | self._get_output_parser()
-        result = chain.invoke(formated)
-        return self._return_as_output(result)
+        return chain.invoke(formated)
 
     def _process_with_tools(self, input_data: Any) -> Any:
         chain = {"input": RunnablePassthrough()} | self._runnable | (lambda x: x["output"])
         result = chain.invoke({"input": self._as_input(input_data)})
         return self.return_as_tool_output(result)
-
-    def _return_as_output(self, result) -> Any:
-        if not self.output_type:
-            return result
-
-        return self.output_type(**result)
 
     def return_as_tool_output(self, result) -> Any:
         if not self.output_type:
@@ -95,7 +85,7 @@ class Agent:
 
         result_chain = self._result_template | self.model | self.output_parser
         final_result = result_chain.invoke({"input": result})
-        return self._return_as_output(final_result)
+        return final_result
 
     def _get_output_parser(self) -> BaseOutputParser:
         return self.output_parser if self.output_parser else StrOutputParser()
@@ -113,7 +103,7 @@ class Agent:
 
         return str(input_data)
 
-    def _create_template(self, prompt_template, output_parser) -> PromptTemplate:
+    def _create_template(self, prompt_template: str, output_parser: BaseOutputParser) -> PromptTemplate:
         if prompt_template and output_parser:
             return PromptTemplate(
                 template=f"{prompt_template}\n{{format_instructions}}",
