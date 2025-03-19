@@ -3,6 +3,8 @@ from pydantic import BaseModel
 
 from tudi import Agent
 
+from .util import normalize_string
+
 
 class FruitQuery(BaseModel):
     fruit: str
@@ -16,15 +18,15 @@ class PriceResult(BaseModel):
 @tool
 def calculate(what: str) -> float:
     """Runs a calculation and returns the number - uses Python so be sure to use floating point syntax if necessary"""
-    return eval(what)
-
+    return eval(normalize_string(what))
 
 @tool
 def ask_fruit_unit_price(fruit: str) -> str:
     """Asks the user for the price of a fruit"""
-    if fruit.casefold() == "apple":
+    normalized_fruit = normalize_string(fruit)
+    if normalized_fruit == "apple":
         return "Apple unit price is 10/kg"
-    elif fruit.casefold() == "banana":
+    elif normalized_fruit == "banana":
         return "Banana unit price is 6/kg"
     else:
         return "{} unit price is 20/kg".format(fruit)

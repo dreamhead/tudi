@@ -2,11 +2,14 @@ from langchain_core.tools import tool
 
 from tudi import Agent
 
+from .util import normalize_string
+
 
 @tool
 def calculate(what: str) -> float:
     """Runs a calculation and returns the number - uses Python so be sure to use floating point syntax if necessary"""
-    return eval(what)
+
+    return eval(normalize_string(what))
 
 class TestAgentTools:
 
