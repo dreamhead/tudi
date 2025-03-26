@@ -8,11 +8,13 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import Runnable, RunnablePassthrough
 from pydantic import BaseModel
 
+from .base import BaseRunnable
+
 InputT = TypeVar('InputT', bound=BaseModel)
 OutputT = TypeVar('OutputT', bound=BaseModel)
 
 
-class Agent:
+class Agent(BaseRunnable):
     def __init__(self,
                  name: str,
                  model: BaseChatModel,
