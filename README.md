@@ -85,6 +85,75 @@ result = agent.run("What is the total price of 3 kg of apple?")
 print(result)  # Output: 30
 ```
 
+### Flow API
+
+Flow API enables you to build complex workflows by chaining multiple Agents together. It provides two key methods:
+
+- **next**: Chain Agents sequentially to create a linear workflow. Each Agent's output becomes the input for the next Agent.
+- **conditional**: Create branching logic based on the output of an Agent. Different downstream Agents can be selected based on conditions.
+
+Here's an example that demonstrates both sequential and conditional flows:
+
+```python
+from pydantic import BaseModel
+from tudi import Agent, Flow, when
+
+# Define types for type safety
+class WeatherQuery(BaseModel):
+    city: str
+
+class WeatherInfo(BaseModel):
+    temperature: float
+    condition: str
+
+class ClothingAdvice(BaseModel):
+    suggestion: str
+
+# Create weather query agent
+weather_agent = Agent(
+    name="weather_agent",
+    model=ChatOllama(model="qwen2.5"),
+    prompt_template="Get weather for {arg.city}",
+    input_type=WeatherQuery,
+    output_type=WeatherInfo
+)
+
+# Create clothing advice agent
+clothing_agent = Agent(
+    name="clothing_agent",
+    model=ChatOllama(model="qwen2.5"),
+    prompt_template="Suggest clothing for temperature {arg.temperature} and condition {arg.condition}",
+    input_type=WeatherInfo,
+    output_type=ClothingAdvice
+)
+
+# Create alternative clothing agent for extreme weather
+extreme_clothing_agent = Agent(
+    name="extreme_clothing_agent",
+    model=ChatOllama(model="qwen2.5"),
+    prompt_template="Suggest protective clothing for extreme weather: {arg.temperature}°C, {arg.condition}",
+    input_type=WeatherInfo,
+    output_type=ClothingAdvice
+)
+
+# Build sequential flow
+flow = Flow.start(weather_agent).next(clothing_agent)
+
+# Run sequential flow
+result = flow.run(WeatherQuery(city="New York"))
+print(result.suggestion)  # Output: Basic clothing suggestion
+
+# Build flow with conditional branching
+flow_with_condition = Flow.start(weather_agent).conditional(
+    when(lambda x: x.temperature > 35 or x.temperature < 0).then(extreme_clothing_agent),
+    default=clothing_agent
+)
+
+# Run conditional flow
+result = flow_with_condition.run(WeatherQuery(city="New York"))
+print(result.suggestion)  # Output: Clothing suggestion based on weather conditions
+```
+
 ## Running Tests
 
 ### Prerequisites
