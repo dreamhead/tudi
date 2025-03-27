@@ -28,13 +28,21 @@ class Agent(BaseRunnable):
         self.name = name
         self.model = model
         self.prompt_template = prompt_template
-        self.input_type = input_type
-        self.output_type = output_type
+        self._input_type = input_type
+        self._output_type = output_type
         self.output_parser = PydanticOutputParser(pydantic_object=output_type) if output_type else None
         self.tools = tools or []
         self._prompt_template = self._init_prompt_template(prompt_template, tools, self.output_parser)
         self._runnable = self._init_runnable(model, tools, self._prompt_template)
         self._result_template = self._init_result_template()
+
+    @property
+    def input_type(self) -> Type[InputT]:
+        return self._input_type
+
+    @property
+    def output_type(self) -> Type[OutputT]:
+        return self._output_type
 
     def _init_prompt_template(self, prompt_template, tools, output_parser) -> PromptTemplate:
         if not tools:
@@ -67,8 +75,8 @@ class Agent(BaseRunnable):
         return self._process_with_tools(input_data)
 
     def _validate_input(self, input_data: Any) -> None:
-        if self.input_type and not isinstance(input_data, self.input_type):
-            raise TypeError(f"Input must be of type {self.input_type.__name__}")
+        if self._input_type and not isinstance(input_data, self._input_type):
+            raise TypeError(f"Input must be of type {self._input_type.__name__}")
 
     def process_without_tools(self, input_data) -> Any:
         template_vars = self._prepare_template_vars(input_data)
