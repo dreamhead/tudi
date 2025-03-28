@@ -65,7 +65,7 @@ class TestFlow:
         result = flow.run("Beijing")
         assert "casual" in result.lower()
 
-    def test_flow_with_map_input(self, model):
+    def test_flow_with_map(self, model):
         weather_agent = Agent(
             name="weather agent",
             model=model,
@@ -83,6 +83,8 @@ class TestFlow:
         def extract_weather(input_str: str) -> str:
             return input_str.split("is")[-1].strip()
 
-        flow = Flow.start(weather_agent).next(dressing_agent, map_input=extract_weather)
+        flow = (Flow.start(weather_agent)
+                .map(extract_weather)
+                .next(dressing_agent))
         result = flow.run("Beijing")
         assert "casual" in result.lower()

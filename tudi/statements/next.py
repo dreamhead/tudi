@@ -1,4 +1,4 @@
-from typing import Any, Callable, Type, TypeVar
+from typing import Any, Type, TypeVar
 
 from pydantic import BaseModel
 
@@ -8,9 +8,8 @@ InputT = TypeVar('InputT', bound=BaseModel)
 OutputT = TypeVar('OutputT', bound=BaseModel)
 
 class NextStatement(Statement):
-    def __init__(self, runnable: Task, map_input: Callable[[Any], Any]):
+    def __init__(self, runnable: Task):
         self.runnable = runnable
-        self.map_input = map_input or (lambda v: v)
         self._input_type = runnable.input_type
 
     @property
@@ -22,5 +21,4 @@ class NextStatement(Statement):
         return self.runnable.output_type
 
     def run(self, input_data: Any) -> Any:
-        transformed_input = self.map_input(input_data)
-        return self.runnable.run(transformed_input)
+        return self.runnable.run(input_data)

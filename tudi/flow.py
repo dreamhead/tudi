@@ -30,16 +30,37 @@ class Flow(Task):
     def start(cls, task: Task) -> 'Flow':
         return cls(task)
 
-    def next(self, task: Task, map_input: Optional[Callable[[Any], Any]] = None) -> 'Flow':
+    def map(self, mapper: Callable[[Any], Any]) -> 'Flow':
+        from tudi.statements import MapStatement
+        task = MapStatement(mapper, self._tasks[-1].output_type)
+        self._tasks.append(task)
+
+        self._set_previous_map_output_type()
+        return self
+
+    def _set_previous_map_output_type(self) -> None:
+        """设置前一个MapStatement的output_type为当前任务的input_type"""
+        if len(self._tasks) < 2:
+            return
+
+        prev_task = self._tasks[-2]
+        current_task = self._tasks[-1]
+
+        from tudi.statements import MapStatement
+        if isinstance(prev_task, MapStatement) and prev_task.output_type is None:
+            prev_task.output_type = current_task.input_type
+
+    def next(self, task: Task) -> 'Flow':
         self._validate_type_compatibility(task)
         from tudi.statements import NextStatement
-        task = NextStatement(task, map_input)
+        task = NextStatement(task)
         self._tasks.append(task)
+        # 添加钩子函数，设置前一个MapStatement的output_type
+        self._set_previous_map_output_type()
         return self
 
     def conditional(self, *conditions: When,
-                    default: Optional[Agent] = None,
-                    map_input: Optional[Callable[[Any], Any]] = None) -> 'Flow':
+                    default: Optional[Agent] = None) -> 'Flow':
         from tudi.statements import ConditionalStatement
         for condition in conditions:
             if not condition.has_then():
@@ -47,8 +68,10 @@ class Flow(Task):
             condition.validate_type_compatibility(self._tasks[-1])
         if default:
             self._validate_type_compatibility(default)
-        statement = ConditionalStatement(list(conditions), default, map_input)
+        statement = ConditionalStatement(list(conditions), default)
         self._tasks.append(statement)
+        # 添加钩子函数，设置前一个MapStatement的output_type
+        self._set_previous_map_output_type()
         return self
 
     def _validate_type_compatibility(self, next_agent: Task) -> None:

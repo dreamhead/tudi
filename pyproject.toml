@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "tudi"
 version = "0.1.0"
-description = "Tudi is an agent framework"
+description = "Tudi is a lightweight Agent framework that provides a simple yet powerful way to build and use AI Agents."
 authors = ["Zheng Ye <dreamhead.cn@gmail.com>"]
 readme = "README.md"
 
