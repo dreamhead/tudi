@@ -20,9 +20,9 @@ def get_weather(city: str) -> str:
 def get_dressing_advice(weather: str) -> str:
     """Gets dressing advice based on weather"""
     if normalize_string(weather) == "sunny":
-        return f"dressing code for {weather} is Business Casual"
+        return f"dressing code for {normalize_string(weather)} is Business Casual"
 
-    return f"dressing code for {weather} is Formal Wear"
+    return f"dressing code for {normalize_string(weather)} is Formal Wear"
 
 class TestFlow:
     def test_flow_with_next(self, model):
@@ -62,5 +62,27 @@ class TestFlow:
         )
 
         flow = Flow.start(weather_agent).next(dressing_agent)
+        result = flow.run("Beijing")
+        assert "casual" in result.lower()
+
+    def test_flow_with_map_input(self, model):
+        weather_agent = Agent(
+            name="weather agent",
+            model=model,
+            prompt_template="Answer the weather report: {input}",
+            tools=[get_weather]
+        )
+
+        dressing_agent = Agent(
+            name="dressing agent",
+            model=model,
+            prompt_template="Give the dressing advice based on weather report: {input}",
+            tools=[get_dressing_advice]
+        )
+
+        def extract_weather(input_str: str) -> str:
+            return input_str.split("is")[-1].strip()
+
+        flow = Flow.start(weather_agent).next(dressing_agent, map_input=extract_weather)
         result = flow.run("Beijing")
         assert "casual" in result.lower()

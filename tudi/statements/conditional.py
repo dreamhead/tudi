@@ -3,7 +3,7 @@ from typing import Any, Callable, Optional, Type, TypeVar
 from pydantic import BaseModel
 
 from tudi.agent import Agent
-from tudi.base import BaseRunnable
+from tudi.base import Runnable, Statement
 
 T = TypeVar('T')
 
@@ -22,7 +22,7 @@ class When:
     def run(self, input_data: Any) -> Any:
         if self._agent:
             return self._agent.run(input_data)
-        return input_data
+        return None
 
     @property
     def input_type(self) -> Type[T]:
@@ -32,12 +32,12 @@ class When:
     def output_type(self) -> Type[T]:
         return self._agent.output_type if self._agent else None
 
-    def validate_type_compatibility(self, last_agent: BaseRunnable) -> None:
+    def validate_type_compatibility(self, last: Runnable) -> None:
         if not self._agent:
             return
 
         from tudi.type_validator import validate_type_compatibility
-        validate_type_compatibility(last_agent, self._agent)
+        validate_type_compatibility(last, self._agent)
 
     def has_then(self) -> bool:
         return self._agent is not None
@@ -48,7 +48,7 @@ def when(predicate: Callable[[Any], bool]) -> When:
 InputT = TypeVar('InputT', bound=BaseModel)
 OutputT = TypeVar('OutputT', bound=BaseModel)
 
-class ConditionalRunnable(BaseRunnable):
+class ConditionalStatement(Statement):
     def __init__(self, conditions: list[When], default: Optional[Agent] = None):
         super().__init__()
         self.conditions = conditions
@@ -74,4 +74,4 @@ class ConditionalRunnable(BaseRunnable):
                 return condition.run(input_data)
         if self.default:
             return self.default.run(input_data)
-        return input_data
+        return None

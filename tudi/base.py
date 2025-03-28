@@ -6,8 +6,7 @@ from pydantic import BaseModel
 InputT = TypeVar('InputT', bound=BaseModel)
 OutputT = TypeVar('OutputT', bound=BaseModel)
 
-
-class BaseRunnable(ABC):
+class Runnable(ABC):
     @abstractmethod
     def run(self, input_data: Any) -> Any:
         pass
@@ -21,3 +20,10 @@ class BaseRunnable(ABC):
     @abstractmethod
     def output_type(self) -> Type[InputT]:
         pass
+
+
+class Task(Runnable, ABC):
+    pass
+
+class Statement(Runnable, ABC):
+    pass
