@@ -88,3 +88,53 @@ class TestConditional:
 
         result = flow.run("beijing")
         assert "casual" in result.suggestion.lower()
+        
+    def test_conditional_flow_with_map_input(self, model):
+        weather_agent = Agent(
+            name="weather agent",
+            model=model,
+            prompt_template="Answer the weather report: {input}",
+            tools=[get_weather]
+        )
+        
+        summer_agent = Agent(
+            name="summer_dressing",
+            model=model,
+            prompt_template="Suggest summer clothes for {input}°C",
+            tools=[get_dressing_advice],
+            output_type=DressingAdvice
+        )
+        
+        winter_agent = Agent(
+            name="winter_dressing",
+            model=model,
+            prompt_template="Suggest winter clothes for {input}°C",
+            tools=[get_dressing_advice],
+            output_type=DressingAdvice
+        )
+        
+        default_agent = Agent(
+            name="default_dressing",
+            model=model,
+            prompt_template="Default clothes for {input}°C",
+            tools=[get_dressing_advice],
+            output_type=DressingAdvice
+        )
+        
+        def extract_degree(weather_str: str) -> int:
+            # Extract the temperature value from the weather report string
+            degree_str = weather_str.split("is")[-1].strip()
+            return int(degree_str.replace("°C", "").rstrip('.'))
+        
+        flow = Flow.start(weather_agent).conditional(
+            when(lambda degree: degree > 30).then(summer_agent),
+            when(lambda degree: degree < 10).then(winter_agent),
+            default=default_agent,
+            map_input=extract_degree
+        )
+        
+        result = flow.run("guangzhou")
+        assert "athleisure" in result.suggestion.lower()
+        
+        result = flow.run("beijing")
+        assert "casual" in result.suggestion.lower()

@@ -32,13 +32,14 @@ class Flow(Task):
 
     def next(self, task: Task, map_input: Optional[Callable[[Any], Any]] = None) -> 'Flow':
         self._validate_type_compatibility(task)
-        if map_input:
-            from tudi.statements import NextStatement
-            task = NextStatement(task, map_input)
+        from tudi.statements import NextStatement
+        task = NextStatement(task, map_input)
         self._tasks.append(task)
         return self
 
-    def conditional(self, *conditions: When, default: Optional[Agent] = None) -> 'Flow':
+    def conditional(self, *conditions: When,
+                    default: Optional[Agent] = None,
+                    map_input: Optional[Callable[[Any], Any]] = None) -> 'Flow':
         from tudi.statements import ConditionalStatement
         for condition in conditions:
             if not condition.has_then():
@@ -46,7 +47,7 @@ class Flow(Task):
             condition.validate_type_compatibility(self._tasks[-1])
         if default:
             self._validate_type_compatibility(default)
-        statement = ConditionalStatement(list(conditions), default)
+        statement = ConditionalStatement(list(conditions), default, map_input)
         self._tasks.append(statement)
         return self
 

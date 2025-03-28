@@ -10,7 +10,7 @@ OutputT = TypeVar('OutputT', bound=BaseModel)
 class NextStatement(Statement):
     def __init__(self, runnable: Task, map_input: Callable[[Any], Any]):
         self.runnable = runnable
-        self.map_input = map_input
+        self.map_input = map_input or (lambda v: v)
         self._input_type = runnable.input_type
 
     @property

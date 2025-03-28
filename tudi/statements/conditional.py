@@ -49,11 +49,14 @@ InputT = TypeVar('InputT', bound=BaseModel)
 OutputT = TypeVar('OutputT', bound=BaseModel)
 
 class ConditionalStatement(Statement):
-    def __init__(self, conditions: list[When], default: Optional[Agent] = None):
+    def __init__(self, conditions: list[When],
+                 default: Optional[Agent] = None,
+                 map_input: Optional[Callable[[Any], Any]] = None):
         super().__init__()
         self.conditions = conditions
         self.default = default
         self._input_type = conditions[0].input_type if conditions else None
+        self._map_input = map_input or (lambda v: v)
 
     @property
     def input_type(self) -> Type[InputT]:
@@ -69,9 +72,10 @@ class ConditionalStatement(Statement):
         return None
 
     def run(self, input_data: Any) -> Any:
+        transformed_input = self._map_input(input_data)
         for condition in self.conditions:
-            if condition.test(input_data):
-                return condition.run(input_data)
+            if condition.test(transformed_input):
+                return condition.run(transformed_input)
         if self.default:
-            return self.default.run(input_data)
+            return self.default.run(transformed_input)
         return None
