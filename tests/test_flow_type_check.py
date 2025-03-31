@@ -35,7 +35,7 @@ class TestFlowTypeCheck:
         with pytest.raises(TypeError, match="Type mismatch"):
             Flow.start(first_agent).next(second_agent)
 
-    def test_flow_conditional_type_mismatch(self, model):
+    def test_flow_case_type_mismatch(self, model):
         from tudi import when
 
         first_agent = Agent(
@@ -53,6 +53,6 @@ class TestFlowTypeCheck:
         )
 
         with pytest.raises(TypeError, match="Type mismatch"):
-            Flow.start(first_agent).conditional(
+            Flow.start(first_agent).case(
                 when(lambda x: True).then(second_agent)
             )

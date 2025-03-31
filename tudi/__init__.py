@@ -1,4 +1,4 @@
-from tudi.statements.conditional import when
+from tudi.statements.case import when
 
 from .agent import Agent
 from .flow import Flow

@@ -90,7 +90,7 @@ print(result)  # 输出: 30
 Flow API 允许你通过链接多个 Agent 来构建复杂的工作流。它提供了两个关键方法：
 
 - **next**：按顺序链接 Agent 以创建线性工作流。每个 Agent 的输出将成为下一个 Agent 的输入。
-- **conditional**：基于 Agent 的输出创建分支逻辑。可以根据条件选择不同的下游 Agent。
+- **case**：基于 Agent 的输出创建分支逻辑。可以根据条件选择不同的下游 Agent。
 
 以下示例展示了顺序流和条件分支流的使用：
 
@@ -98,42 +98,46 @@ Flow API 允许你通过链接多个 Agent 来构建复杂的工作流。它提�
 from pydantic import BaseModel
 from tudi import Agent, Flow, when
 
+
 # 定义类型以确保类型安全
 class WeatherQuery(BaseModel):
-    city: str
+  city: str
+
 
 class WeatherInfo(BaseModel):
-    temperature: float
-    condition: str
+  temperature: float
+  condition: str
+
 
 class ClothingAdvice(BaseModel):
-    suggestion: str
+  suggestion: str
+
 
 # 创建天气查询 agent
 weather_agent = Agent(
-    name="weather_agent",
-    model=ChatOllama(model="qwen2.5"),
-    prompt_template="获取{arg.city}的天气",
-    input_type=WeatherQuery,
-    output_type=WeatherInfo
+  name="weather_agent",
+  model=ChatOllama(model="qwen2.5"),
+  prompt_template="获取{arg.city}的天气",
+  input_type=WeatherQuery,
+  output_type=WeatherInfo
 )
 
 # 创建着装建议 agent
 clothing_agent = Agent(
-    name="clothing_agent",
-    model=ChatOllama(model="qwen2.5"),
-    prompt_template="根据气温{arg.temperature}和天气状况{arg.condition}给出着装建议",
-    input_type=WeatherInfo,
-    output_type=ClothingAdvice
+  name="clothing_agent",
+  model=ChatOllama(model="qwen2.5"),
+  prompt_template="根据气温{arg.temperature}和天气状况{arg.condition}给出着装建议",
+  input_type=WeatherInfo,
+  output_type=ClothingAdvice
 )
 
 # 创建极端天气着装建议 agent
 extreme_clothing_agent = Agent(
-    name="extreme_clothing_agent",
-    model=ChatOllama(model="qwen2.5"),
-    prompt_template="针对极端天气（气温{arg.temperature}°C，天气状况{arg.condition}）给出防护性着装建议",
-    input_type=WeatherInfo,
-    output_type=ClothingAdvice
+  name="extreme_clothing_agent",
+  model=ChatOllama(model="qwen2.5"),
+  prompt_template="针对极端天气（气温{arg.temperature}°C，天气状况{arg.condition}）给出防护性着装建议",
+  input_type=WeatherInfo,
+  output_type=ClothingAdvice
 )
 
 # 构建顺序流
@@ -144,9 +148,9 @@ result = flow.run(WeatherQuery(city="北京"))
 print(result.suggestion)  # 输出: 基本着装建议
 
 # 构建带条件分支的工作流
-flow_with_condition = Flow.start(weather_agent).conditional(
-    when(lambda x: x.temperature > 35 or x.temperature < 0).then(extreme_clothing_agent),
-    default=clothing_agent
+flow_with_condition = Flow.start(weather_agent).case(
+  when(lambda x: x.temperature > 35 or x.temperature < 0).then(extreme_clothing_agent),
+  default=clothing_agent
 )
 
 # 运行条件分支流

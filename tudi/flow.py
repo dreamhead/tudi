@@ -3,9 +3,9 @@ from typing import Any, Callable, List, Optional, Type, TypeVar
 from pydantic import BaseModel
 
 from tudi.agent import Agent
-from tudi.statements.conditional import When
+from tudi.statements.case import When
 
-from .base import Runnable, Task
+from .base import Runnable, Statement, Task
 
 InputT = TypeVar('InputT', bound=BaseModel)
 OutputT = TypeVar('OutputT', bound=BaseModel)
@@ -47,19 +47,19 @@ class Flow(Task):
         self._on_new_runnable(task)
         return self
 
-    def _create_conditional_statement(self, conditions: list[When], default: Optional[Agent] = None) -> 'ConditionalStatement':
-        from tudi.statements import ConditionalStatement
+    def _create_case_statement(self, conditions: list[When], default: Optional[Agent] = None) -> Statement:
+        from tudi.statements import CaseStatement
         for condition in conditions:
             if not condition.has_then():
                 raise ValueError("Condition must have an agent set using 'then' method")
             condition.validate_type_compatibility(self._tasks[-1])
         if default:
             self._validate_type_compatibility(default)
-        return ConditionalStatement(conditions, default)
+        return CaseStatement(conditions, default)
 
-    def conditional(self, *conditions: When,
-                    default: Optional[Agent] = None) -> 'Flow':
-        statement = self._create_conditional_statement(list(conditions), default)
+    def case(self, *conditions: When,
+             default: Optional[Agent] = None) -> 'Flow':
+        statement = self._create_case_statement(list(conditions), default)
         self._tasks.append(statement)
         # 添加钩子函数，设置前一个MapStatement的output_type
         self._on_new_runnable(statement)

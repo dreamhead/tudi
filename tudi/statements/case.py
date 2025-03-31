@@ -48,7 +48,7 @@ def when(predicate: Callable[[Any], bool]) -> When:
 InputT = TypeVar('InputT', bound=BaseModel)
 OutputT = TypeVar('OutputT', bound=BaseModel)
 
-class ConditionalStatement(Statement):
+class CaseStatement(Statement):
     def __init__(self, conditions: list[When],
                  default: Optional[Agent] = None):
         super().__init__()

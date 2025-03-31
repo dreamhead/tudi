@@ -24,7 +24,7 @@ def get_dressing_advice(weather: str) -> str:
 
     return f"dressing code for {normalize_string(weather)} is Formal Wear"
 
-class TestFlow:
+class TestFlowNext:
     def test_flow_with_next(self, model):
         weather_agent = Agent(
             name="weather agent",

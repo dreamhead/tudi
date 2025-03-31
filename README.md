@@ -90,7 +90,7 @@ print(result)  # Output: 30
 Flow API enables you to build complex workflows by chaining multiple Agents together. It provides two key methods:
 
 - **next**: Chain Agents sequentially to create a linear workflow. Each Agent's output becomes the input for the next Agent.
-- **conditional**: Create branching logic based on the output of an Agent. Different downstream Agents can be selected based on conditions.
+- **case**: Create branching logic based on the output of an Agent. Different downstream Agents can be selected based on conditions.
 
 Here's an example that demonstrates both sequential and conditional flows:
 
@@ -98,16 +98,20 @@ Here's an example that demonstrates both sequential and conditional flows:
 from pydantic import BaseModel
 from tudi import Agent, Flow, when
 
+
 # Define types for type safety
 class WeatherQuery(BaseModel):
     city: str
+
 
 class WeatherInfo(BaseModel):
     temperature: float
     condition: str
 
+
 class ClothingAdvice(BaseModel):
     suggestion: str
+
 
 # Create weather query agent
 weather_agent = Agent(
@@ -144,7 +148,7 @@ result = flow.run(WeatherQuery(city="New York"))
 print(result.suggestion)  # Output: Basic clothing suggestion
 
 # Build flow with conditional branching
-flow_with_condition = Flow.start(weather_agent).conditional(
+flow_with_condition = Flow.start(weather_agent).case(
     when(lambda x: x.temperature > 35 or x.temperature < 0).then(extreme_clothing_agent),
     default=clothing_agent
 )

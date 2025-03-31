@@ -40,8 +40,8 @@ def get_dressing_advice(degree: str) -> str:
         return f"dressing code for {degree} is Smart Casual"
 
 
-class TestConditional:
-    def test_conditional_flow(self, model):
+class TestFlowCase:
+    def test_case_flow(self, model):
         weather_agent = Agent(
             name="weather agent",
             model=model,
@@ -77,11 +77,12 @@ class TestConditional:
             tools=[get_dressing_advice]
         )
 
-        flow = Flow.start(weather_agent).conditional(
+        flow = (Flow.start(weather_agent)
+        .case(
             when(lambda weather: int(weather.degree) > 30).then(summer_agent),
             when(lambda weather: int(weather.degree) < 10).then(winter_agent),
             default=default_agent
-        )
+        ))
 
         result = flow.run("guangzhou")
         assert "athleisure" in result.suggestion.lower()
@@ -89,7 +90,7 @@ class TestConditional:
         result = flow.run("beijing")
         assert "casual" in result.suggestion.lower()
 
-    def test_conditional_flow_with_map(self, model):
+    def test_case_flow_with_map(self, model):
         weather_agent = Agent(
             name="weather agent",
             model=model,
@@ -134,7 +135,7 @@ class TestConditional:
 
         flow = (Flow.start(weather_agent)
         .map(extract_degree)
-        .conditional(
+        .case(
             when(lambda degree: degree > 30).then(summer_agent),
             when(lambda degree: degree < 10).then(winter_agent),
             default=default_agent
