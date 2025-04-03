@@ -49,25 +49,23 @@ class Flow(Task):
         return self
 
     def _create_case_statement(self, conditions: list[When],
-                               default: Optional[Agent] = None,
                                output_type: Optional[Type] = None) -> Statement:
         from tudi.statements import CaseStatement
         for condition in conditions:
             if not condition.has_then():
                 raise ValueError("Condition must have an agent set using 'then' method")
             condition.validate_type_compatibility(self._tasks[-1])
-        if default:
-            self._validate_type_compatibility(default)
 
         # 检查所有分支的输出类型是否一致
-        self._validate_case_branch_types(conditions, default, output_type)
+        self._validate_case_branch_types(conditions, output_type)
 
-        return CaseStatement(conditions, default, output_type)
+        return CaseStatement(conditions, output_type)
 
     def _validate_case_branch_types(self, conditions: list[When],
-                                    default: Optional[Agent] = None,
                                     output_type: Optional[Type] = None) -> None:
-        """检查所有分支的输出类型是否一致，如果指定了output_type，则所有分支的输出类型必须与之一致"""
+        """检查所有分支的输出类型是否一致，如果指定了output_type，则所有分支的输出类型必须与之一致
+        如果分支设置了to_output，则跳过该分支的类型检查
+        """
         if not conditions:
             return
 
@@ -78,6 +76,10 @@ class Flow(Task):
 
         # 检查所有条件分支的输出类型是否与基准类型一致
         for i, condition in enumerate(conditions):
+            # 如果设置了输出转换器，则跳过类型检查
+            if condition.has_output_mapper():
+                continue
+                
             if condition.output_type != expected_type:
                 type_mismatch_source = "specified output_type" if output_type else "Branch 0"
                 error_msg = f"""Type mismatch in case branches:
@@ -85,18 +87,9 @@ class Flow(Task):
   Branch {i} output type: {condition.output_type.__name__}"""
                 raise TypeError(error_msg)
 
-        # 检查默认分支的输出类型是否与基准类型一致
-        if default and default.output_type != expected_type:
-            type_mismatch_source = "specified output_type" if output_type else "condition branches"
-            error_msg = f"""Type mismatch in case branches:
-  Expected output type ({type_mismatch_source}): {expected_type.__name__}
-  Default branch output type: {default.output_type.__name__}"""
-            raise TypeError(error_msg)
-
     def case(self, *conditions: When,
-             default: Optional[Agent] = None,
              output_type: Optional[Type] = None) -> 'Flow':
-        statement = self._create_case_statement(list(conditions), default, output_type)
+        statement = self._create_case_statement(list(conditions), output_type)
         self._tasks.append(statement)
         # 添加钩子函数，设置前一个MapStatement的output_type
         self._on_new_runnable(statement)

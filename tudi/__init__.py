@@ -1,7 +1,7 @@
-from tudi.statements.case import when
+from tudi.statements.case import default, when
 
 from .agent import Agent
 from .flow import Flow
 
-__all__ = ['Agent', 'Flow', 'when']
+__all__ = ['Agent', 'Flow', 'when', 'default']
 

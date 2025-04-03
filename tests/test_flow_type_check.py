@@ -1,7 +1,7 @@
 import pytest
 from pydantic import BaseModel
 
-from tudi import Agent, Flow
+from tudi import Agent, Flow, default
 
 
 class InputType(BaseModel):
@@ -131,6 +131,6 @@ class TestFlowTypeCheck:
         with pytest.raises(TypeError, match="Type mismatch in case branches"):
             Flow.start(first_agent).case(
                 when(lambda x: x.result == "condition").then(branch_agent),
-                default=default_agent,
+                default(default_agent),
                 output_type=OutputType
             )
