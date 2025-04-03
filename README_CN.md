@@ -87,7 +87,7 @@ print(result)  # 输出: 30
 
 ### 流程控制 API
 
-Flow API 允许你通过链接多个 Agent 来构建复杂的工作流。它提供了两个关键方法：
+Flow API 允许你通过连接多个 Agent 来构建复杂的工作流。它提供了两个关键方法：
 
 - **next**：按顺序链接 Agent 以创建线性工作流。每个 Agent 的输出将成为下一个 Agent 的输入。
 - **case**：基于 Agent 的输出创建分支逻辑。可以根据条件选择不同的下游 Agent。

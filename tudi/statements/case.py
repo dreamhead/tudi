@@ -50,11 +50,13 @@ OutputT = TypeVar('OutputT', bound=BaseModel)
 
 class CaseStatement(Statement):
     def __init__(self, conditions: list[When],
-                 default: Optional[Agent] = None):
+                 default: Optional[Agent] = None,
+                 output_type: Optional[Type[OutputT]] = None):
         super().__init__()
         self.conditions = conditions
         self.default = default
         self._input_type = conditions[0].input_type if conditions else None
+        self._output_type = self._as_output_type(output_type)
 
     @property
     def input_type(self) -> Type[InputT]:
@@ -62,12 +64,8 @@ class CaseStatement(Statement):
 
     @property
     def output_type(self) -> Type[OutputT]:
-        if self.default:
-            return self.default.output_type
-        if self.conditions and self.conditions[-1].output_type:
-            return self.conditions[-1].output_type
-
-        return None
+        if self._output_type:
+            return self._output_type
 
     def run(self, input_data: Any) -> Any:
         for condition in self.conditions:
@@ -76,3 +74,11 @@ class CaseStatement(Statement):
         if self.default:
             return self.default.run(input_data)
         return None
+
+    def _as_output_type(self, output_type):
+        if output_type:
+            return output_type
+        if self.default:
+            return self.default.output_type
+        if self.conditions and self.conditions[-1].output_type:
+            return self.conditions[-1].output_type

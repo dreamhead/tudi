@@ -10,6 +10,7 @@ from .base import Runnable, Statement, Task
 InputT = TypeVar('InputT', bound=BaseModel)
 OutputT = TypeVar('OutputT', bound=BaseModel)
 
+
 class Flow(Task):
     def __init__(self, runnable: Task):
         super().__init__()
@@ -47,7 +48,9 @@ class Flow(Task):
         self._on_new_runnable(task)
         return self
 
-    def _create_case_statement(self, conditions: list[When], default: Optional[Agent] = None) -> Statement:
+    def _create_case_statement(self, conditions: list[When],
+                               default: Optional[Agent] = None,
+                               output_type: Optional[Type] = None) -> Statement:
         from tudi.statements import CaseStatement
         for condition in conditions:
             if not condition.has_then():
@@ -55,11 +58,45 @@ class Flow(Task):
             condition.validate_type_compatibility(self._tasks[-1])
         if default:
             self._validate_type_compatibility(default)
-        return CaseStatement(conditions, default)
+
+        # 检查所有分支的输出类型是否一致
+        self._validate_case_branch_types(conditions, default, output_type)
+
+        return CaseStatement(conditions, default, output_type)
+
+    def _validate_case_branch_types(self, conditions: list[When],
+                                    default: Optional[Agent] = None,
+                                    output_type: Optional[Type] = None) -> None:
+        """检查所有分支的输出类型是否一致，如果指定了output_type，则所有分支的输出类型必须与之一致"""
+        if not conditions:
+            return
+
+        # 确定基准输出类型：如果提供了output_type就使用它，否则使用第一个condition的output_type
+        expected_type = output_type if output_type else conditions[0].output_type
+        if not expected_type:
+            return
+
+        # 检查所有条件分支的输出类型是否与基准类型一致
+        for i, condition in enumerate(conditions):
+            if condition.output_type != expected_type:
+                type_mismatch_source = "specified output_type" if output_type else "Branch 0"
+                error_msg = f"""Type mismatch in case branches:
+  Expected output type ({type_mismatch_source}): {expected_type.__name__}
+  Branch {i} output type: {condition.output_type.__name__}"""
+                raise TypeError(error_msg)
+
+        # 检查默认分支的输出类型是否与基准类型一致
+        if default and default.output_type != expected_type:
+            type_mismatch_source = "specified output_type" if output_type else "condition branches"
+            error_msg = f"""Type mismatch in case branches:
+  Expected output type ({type_mismatch_source}): {expected_type.__name__}
+  Default branch output type: {default.output_type.__name__}"""
+            raise TypeError(error_msg)
 
     def case(self, *conditions: When,
-             default: Optional[Agent] = None) -> 'Flow':
-        statement = self._create_case_statement(list(conditions), default)
+             default: Optional[Agent] = None,
+             output_type: Optional[Type] = None) -> 'Flow':
+        statement = self._create_case_statement(list(conditions), default, output_type)
         self._tasks.append(statement)
         # 添加钩子函数，设置前一个MapStatement的output_type
         self._on_new_runnable(statement)
@@ -75,7 +112,6 @@ class Flow(Task):
 
         from tudi.type_validator import validate_type_compatibility
         validate_type_compatibility(last_agent, next_agent)
-
 
     def run(self, input_data: Any) -> Any:
         result = input_data
