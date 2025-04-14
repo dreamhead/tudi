@@ -11,6 +11,16 @@ def calculate(what: str) -> float:
 
     return eval(normalize_string(what))
 
+@tool
+def add(a: int, b: int) -> int:
+    """Adds two numbers together"""
+    return a + b
+
+@tool
+def multiply(a: int, b: int) -> int:
+    """Multiply two numbers together"""
+    return a * b
+
 class TestAgentTools:
 
     def test_agent_with_tools(self, model):
@@ -33,3 +43,15 @@ class TestAgentTools:
         result = agent.run("What is 3 * 3? Answer the result directly")
         assert isinstance(result, str)
         assert "9" in result
+
+    def test_agent_with_multiple_parameters_tool(self, model):
+        agent = Agent(
+            name="test_agent",
+            model=model,
+            prompt_template="Please calculate: {input}",
+            tools=[add, multiply]
+        )
+
+        result = agent.run("What is 1 + 2 * 3? Answer the result directly")
+        assert isinstance(result, str)
+        assert "7" in result
