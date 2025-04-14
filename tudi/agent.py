@@ -2,10 +2,18 @@ from types import SimpleNamespace
 from typing import Any, Callable, List, Optional, Type, TypeVar
 
 from langchain.agents import AgentExecutor, create_react_agent
+from langchain.agents.output_parsers import ReActJsonSingleInputOutputParser
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.output_parsers import BaseOutputParser, PydanticOutputParser, StrOutputParser
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import (
+    BasePromptTemplate,
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    PromptTemplate,
+    SystemMessagePromptTemplate,
+)
 from langchain_core.runnables import Runnable, RunnablePassthrough
+from langchain_core.tools import render_text_description_and_args
 from pydantic import BaseModel
 
 from .base import Task
@@ -44,7 +52,7 @@ class Agent(Task):
     def output_type(self) -> Type[OutputT]:
         return self._output_type
 
-    def _init_prompt_template(self, prompt_template, tools, output_parser) -> PromptTemplate:
+    def _init_prompt_template(self, prompt_template, tools, output_parser) -> BasePromptTemplate:
         if not tools:
             return self._create_template(prompt_template, output_parser)
 
@@ -64,7 +72,9 @@ class Agent(Task):
         if not tools:
             return model
 
-        agent = create_react_agent(model, tools, prompt_template)
+        agent = create_react_agent(model, tools, prompt_template,
+                                   tools_renderer=render_text_description_and_args,
+                                   output_parser=ReActJsonSingleInputOutputParser())
         return AgentExecutor(agent=agent, tools=tools, verbose=True)
 
     def run(self, input_data: Any) -> Any:
@@ -100,11 +110,13 @@ class Agent(Task):
     def _get_output_parser(self) -> BaseOutputParser:
         return self.output_parser if self.output_parser else StrOutputParser()
 
-    def _create_agent_prompt(self) -> PromptTemplate:
+    def _create_agent_prompt(self) -> ChatPromptTemplate:
         from tudi.prompts import AGENT_PROMPT
-        return PromptTemplate.from_template(
-            template=AGENT_PROMPT,
-        )
+        return ChatPromptTemplate.from_messages([
+            SystemMessagePromptTemplate.from_template(AGENT_PROMPT),
+            HumanMessagePromptTemplate.from_template('''{input}
+
+        {agent_scratchpad}''')])
 
     def _as_input(self, input_data: Any) -> str:
         if self.prompt_template:

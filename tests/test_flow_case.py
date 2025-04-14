@@ -35,9 +35,8 @@ def get_weather(city: str) -> str:
 
 
 @tool
-def get_dressing_advice(degree: str) -> str:
+def get_dressing_advice(degree: int) -> str:
     """Gets dressing advice based on degree"""
-    degree = int(normalize_string(degree))
     if degree > 30:
         return f"dressing code for {degree} is Athleisure"
     elif degree > 25:
@@ -60,7 +59,7 @@ class TestFlowCase:
             name="summer_dressing",
             input_type=WeatherReport,
             output_type=DressingAdvice,
-            prompt_template="Suggest summer clothes for {arg.degree}°C",
+            prompt_template="Just give a summer dressing code for {arg.degree}°C, Do NOT explain to much",
             model=model,
             tools=[get_dressing_advice]
         )
@@ -69,7 +68,7 @@ class TestFlowCase:
             name="winter_dressing",
             input_type=WeatherReport,
             output_type=DressingAdvice,
-            prompt_template="Suggest winter clothes for {arg.degree}°C",
+            prompt_template="Just give a winter dressing code for {arg.degree}°C, Do NOT explain to much",
             model=model,
             tools=[get_dressing_advice]
         )
@@ -78,7 +77,7 @@ class TestFlowCase:
             name="default_dressing",
             input_type=WeatherReport,
             output_type=DressingAdvice,
-            prompt_template="Default clothes for {arg.degree}°C",
+            prompt_template="Just give a default dressing code for {arg.degree}°C, Do NOT explain to much",
             model=model,
             tools=[get_dressing_advice]
         )
@@ -107,7 +106,7 @@ class TestFlowCase:
         summer_agent = Agent(
             name="summer_dressing",
             model=model,
-            prompt_template="Suggest summer clothes for {input}°C",
+            prompt_template="Just give a summer dressing code for {input}°C, Do NOT explain to much",
             tools=[get_dressing_advice],
             output_type=DressingAdvice
         )
@@ -115,7 +114,7 @@ class TestFlowCase:
         winter_agent = Agent(
             name="winter_dressing",
             model=model,
-            prompt_template="Suggest winter clothes for {input}°C",
+            prompt_template="Just give a winter dressing code for {input}°C, Do NOT explain to much",
             tools=[get_dressing_advice],
             output_type=DressingAdvice
         )
@@ -123,7 +122,7 @@ class TestFlowCase:
         default_agent = Agent(
             name="default_dressing",
             model=model,
-            prompt_template="Default clothes for {input}°C",
+            prompt_template="Just give a default dressing code for {input}°C, Do NOT explain to much",
             tools=[get_dressing_advice],
             output_type=DressingAdvice
         )
@@ -132,12 +131,12 @@ class TestFlowCase:
             # Extract the temperature value from the weather report string
             import re
             # Find any number followed by °C in the string
-            match = re.search(r'(\d+)\s*°C', weather_str)
+            match = re.search(r'(\d+)\s*(?:°C|degrees\s+Celsius)\.?', weather_str)
             if match:
                 return int(match.group(1))
             # Fallback to the original method if no match is found
             degree_str = weather_str.split("is")[-1].strip()
-            return int(degree_str.replace("°C", "").rstrip('.'))
+            return int(degree_str.replace("°C", "").replace("degrees Celsius", "").rstrip('.'))
 
         flow = (Flow.start(weather_agent)
         .map(extract_degree)
@@ -166,7 +165,7 @@ class TestFlowCase:
             name="summer_dressing",
             input_type=WeatherReport,
             output_type=DressingAdvice,
-            prompt_template="Suggest summer clothes for {arg.degree}°C",
+            prompt_template="Just give a summer dressing code for {arg.degree}°C, Do NOT explain to much",
             model=model,
             tools=[get_dressing_advice]
         )
@@ -175,7 +174,7 @@ class TestFlowCase:
             name="winter_dressing",
             input_type=WeatherReport,
             output_type=DressingAdvice,
-            prompt_template="Suggest winter clothes for {arg.degree}°C",
+            prompt_template="Just give a winter dressing code for {arg.degree}°C, Do NOT explain to much",
             model=model,
             tools=[get_dressing_advice]
         )
@@ -184,12 +183,11 @@ class TestFlowCase:
             name="default_dressing",
             input_type=WeatherReport,
             output_type=DressingAdvice,
-            prompt_template="Default clothes for {arg.degree}°C",
+            prompt_template="Just give a default dressing code for {arg.degree}°C, Do NOT explain to much",
             model=model,
             tools=[get_dressing_advice]
         )
 
-        # 使用to_output转换输出类型
         flow = (Flow.start(weather_agent)
         .case(
             when(lambda weather: int(weather.degree) > 30).then(summer_agent).to_output(

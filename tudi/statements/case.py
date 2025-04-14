@@ -106,12 +106,10 @@ class CaseStatement(Statement):
     def _as_output_type(self, output_type):
         if output_type:
             return output_type
-        # if self.default:
-        #     return self.default.output_type
         if self.conditions and self.conditions[-1].output_type:
             return self.conditions[-1].output_type
 
-    def _split_conditions(self, conditions):
+    def _split_conditions(self, conditions:list[When]) -> tuple[Optional[When], list[When]]:
         default_conditions = [cond for cond in conditions if cond.is_default()]
         non_default_conditions = [cond for cond in conditions if not cond.is_default()]
 

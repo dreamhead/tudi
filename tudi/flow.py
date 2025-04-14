@@ -12,10 +12,10 @@ OutputT = TypeVar('OutputT', bound=BaseModel)
 
 
 class Flow(Task):
-    def __init__(self, runnable: Task):
+    def __init__(self, task: Task):
         super().__init__()
-        self._tasks: List[Runnable] = [runnable]
-        self._input_type = runnable.input_type
+        self._tasks: List[Runnable] = [task]
+        self._input_type = task.input_type
 
     def input_type(self) -> Type[InputT]:
         return self._input_type
@@ -42,10 +42,9 @@ class Flow(Task):
     def next(self, task: Task) -> 'Flow':
         self._validate_type_compatibility(task)
         from tudi.statements import NextStatement
-        task = NextStatement(task)
-        self._tasks.append(task)
-        # 添加钩子函数，设置前一个MapStatement的output_type
-        self._on_new_runnable(task)
+        new_task = NextStatement(task)
+        self._tasks.append(new_task)
+        self._on_new_runnable(new_task)
         return self
 
     def _create_case_statement(self, conditions: list[When],
@@ -91,7 +90,6 @@ class Flow(Task):
              output_type: Optional[Type] = None) -> 'Flow':
         statement = self._create_case_statement(list(conditions), output_type)
         self._tasks.append(statement)
-        # 添加钩子函数，设置前一个MapStatement的output_type
         self._on_new_runnable(statement)
         return self
 
