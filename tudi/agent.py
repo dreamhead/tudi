@@ -16,6 +16,8 @@ from langchain_core.runnables import Runnable, RunnablePassthrough
 from langchain_core.tools import render_text_description_and_args
 from pydantic import BaseModel
 
+from tudi.output_parsers import ThinkTagRemoverOutputParser
+
 from .base import Task
 
 InputT = TypeVar('InputT', bound=BaseModel)
@@ -38,7 +40,8 @@ class Agent(Task):
         self.prompt_template = prompt_template
         self._input_type = input_type
         self._output_type = output_type
-        self.output_parser = PydanticOutputParser(pydantic_object=output_type) if output_type else None
+        base_parser = PydanticOutputParser(pydantic_object=output_type) if output_type else StrOutputParser()
+        self.output_parser = ThinkTagRemoverOutputParser(parser=base_parser) if base_parser else None
         self.tools = tools or []
         self._prompt_template = self._init_prompt_template(prompt_template, tools, self.output_parser)
         self._runnable = self._init_runnable(model, tools, self._prompt_template)
@@ -108,7 +111,7 @@ class Agent(Task):
         return final_result
 
     def _get_output_parser(self) -> BaseOutputParser:
-        return self.output_parser if self.output_parser else StrOutputParser()
+        return self.output_parser if self.output_parser else ThinkTagRemoverOutputParser(StrOutputParser())
 
     def _create_agent_prompt(self) -> ChatPromptTemplate:
         from tudi.prompts import AGENT_PROMPT

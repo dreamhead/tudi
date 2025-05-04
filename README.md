@@ -164,12 +164,12 @@ print(result.suggestion)  # Output: Clothing suggestion based on weather conditi
 
 - Install and run [Ollama](https://ollama.ai)
 - Choose one of the following methods to configure the model:
-  1. Install qwen2.5 model
+  1. Install qwen3 model
   2. Install your custom model and configure TUDI_TEST_MODEL environment variable
 
 ```bash
 # Option 1: Install qwen2.5 model
-ollama pull qwen2.5
+ollama pull qwen3
 
 # Option 2: Install your custom model and set environment variable
 ollama pull your-model-name

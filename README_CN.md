@@ -165,12 +165,12 @@ print(result.suggestion)  # 输出: 基于天气状况的着装建议
 
 - 安装并运行 [Ollama](https://ollama.ai)
 - 选择以下任一方式配置模型：
-  1. 安装 qwen2.5 模型
+  1. 安装 qwen3 模型
   2. 安装自定义模型并配置 TUDI_TEST_MODEL 环境变量
 
 ```bash
 # 选项一：安装 qwen2.5 模型
-ollama pull qwen2.5
+ollama pull qwen3
 
 # 选项二：安装自定义模型并设置环境变量
 ollama pull your-model-name
